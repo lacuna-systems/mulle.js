@@ -2,10 +2,7 @@ name: Publish Helm chart
 
 on:
   push:
-    branches: [ master ]
     tags: [ 'v*' ]
-    paths: [ 'charts/**', '.github/workflows/publish_helm_chart.yml' ]
-  pull_request:
     paths: [ 'charts/**', '.github/workflows/publish_helm_chart.yml' ]
   workflow_dispatch:
 
