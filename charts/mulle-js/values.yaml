@@ -1,0 +1,56 @@
+# Pull secrets for private GHCR packages, e.g. [{ name: ghcr-pull }]
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+web:
+  enabled: true
+  # Game language. One image is built per language: no, sv, da, fi, nl.
+  language: sv
+  image:
+    repository: ghcr.io/lacuna-systems/mulle-js
+    # Defaults to the language (floating tag, e.g. "sv"). Pin to "<language>-sha-<commit>" for reproducible deploys.
+    tag: ""
+    pullPolicy: Always
+  # WebSocket URL the browser uses to reach the multiplayer server, e.g. wss://mulle.example.com/ws.
+  # When empty and ingress is enabled, it is derived from ingress.host and server.ingressPath
+  # (wss:// if ingress.tls is set). Otherwise the address the image was built with is used.
+  serverAddress: ""
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 80
+  resources: {}
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+server:
+  enabled: true
+  image:
+    repository: ghcr.io/lacuna-systems/mulle-js-server
+    tag: latest
+    pullPolicy: Always
+  # The server keeps all state in memory, so it always runs as a single replica.
+  service:
+    type: ClusterIP
+    port: 8765
+  # Path routed to the server when ingress is enabled. The server accepts upgrades on any path.
+  ingressPath: /ws
+  resources: {}
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: mulle.example.com
+  tls: []
+  #  - secretName: mulle-tls
+  #    hosts:
+  #      - mulle.example.com

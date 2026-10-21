@@ -91,3 +91,9 @@ COPY --from=builder_py /build/assets_${GAME_LANG} ./assets
 COPY --from=builder_py /build/dist .
 
 RUN echo ${GAME_LANG}
+
+# Runtime configuration (config.js) is generated from the environment on start
+COPY --chmod=755 ./docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+ENV SERVER_ADDRESS=""
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["httpd-foreground"]

@@ -1,0 +1,17 @@
+{{- if .Values.ingress.enabled }}
+Mulle.js: http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}/
+Multiplayer server: ws{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}{{ .Values.server.ingressPath }}
+{{- else }}
+Port-forward to try it locally:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "mulle-js.fullname" . }}-web 8080:{{ .Values.web.service.port }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "mulle-js.fullname" . }}-server 8765:{{ .Values.server.service.port }}
+{{- end }}
+
+{{- with include "mulle-js.serverAddress" . }}
+The game connects to the multiplayer server at {{ . }}
+{{- else }}
+web.serverAddress is not set, so the game uses the server address built into {{ include "mulle-js.webImage" . }}.
+{{- end }}
+
+Server admin console:
+  kubectl -n {{ .Release.Namespace }} attach -it deploy/{{ include "mulle-js.fullname" . }}-server

@@ -1,13 +1,14 @@
-name: Publish Docker image
+name: Publish web Docker images
 
 on:
   push:
     branches: [ master ]
+    tags: [ 'v*' ]
   workflow_dispatch:
 
 jobs:
   push_to_registry:
-    name: Push Docker image to Docker Hub
+    name: Push web Docker image (${{ matrix.language }}) to GHCR
     runs-on: ubuntu-latest
 
     strategy:
@@ -21,24 +22,32 @@ jobs:
       attestations: write
       id-token: write
     steps:
+      - name: Set image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/mulle-js" >> "$GITHUB_ENV"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
       - name: Check out the repo
         uses: actions/checkout@v7
 
-      - name: Log in to registry
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4.6.0
         with:
-          registry: docker.datagutten.net
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v6.2.0
         with:
-          images: datagutten/mulle_js
+          images: ${{ env.IMAGE }}
+          flavor: latest=false
+          tags: |
+            type=raw,value=${{ matrix.language }},enable={{is_default_branch}}
+            type=sha,prefix=${{ matrix.language }}-sha-
+            type=semver,pattern={{version}},prefix=${{ matrix.language }}-
 
       - name: Cache data
         uses: actions/cache@v6
@@ -48,6 +57,9 @@ jobs:
           key: game-iso-${{ matrix.language }}-${{ hashFiles('iso/mullebil_*.iso') }}
           restore-keys: game-iso-${{ matrix.language }}-
 
+      - name: Install download dependencies
+        run: pip install requests pyyaml
+
       - name: Download game
         run: python build_scripts/build.py ${{ matrix.language }} download-only
 
@@ -56,19 +68,16 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           push: true
-          tags: |
-            docker.datagutten.net/mulle_js_${{ matrix.language }}
-            docker.datagutten.net/mulle_js:${{ matrix.language }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-contexts: iso=iso
           build-args: |
             GAME_LANG=${{ matrix.language }}
             OPTIPNG_LEVEL=0
-            SERVER_ADDRESS=wss://server.mulle.datagutten.net
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v4
         with:
-          subject-name: docker.datagutten.net/mulle_js_${{ matrix.language }}
+          subject-name: ${{ env.IMAGE }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true

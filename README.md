@@ -40,4 +40,39 @@ npm install
 npm run build
 npm start
 ```
+## Docker Compose
+Download the game ISO for your language (`no`, `sv`, `da`, `fi` or `nl`; requires `pip install requests pyyaml`):
+```
+python3 build_scripts/build.py sv download-only
+```
+
+Build and start the game and the multiplayer server:
+```
+docker compose up --build
+```
+The game is served at http://localhost:8080/ and the multiplayer server listens on ws://localhost:8765.
+Set `GAME_LANG`, `WEB_PORT`, `SERVER_PORT` or `SERVER_ADDRESS` in the environment or in a `.env` file to override the defaults.
+`SERVER_ADDRESS` is the WebSocket URL the browser connects to. The web container writes it to `config.js` on start,
+so it can be changed without rebuilding the image.
+
+## Kubernetes (Helm)
+Images and the Helm chart are published to GitHub Packages by the workflows in `.github/workflows`:
+* `ghcr.io/lacuna-systems/mulle-js:<lang>` (one image per language)
+* `ghcr.io/lacuna-systems/mulle-js-server:latest`
+* `oci://ghcr.io/lacuna-systems/charts/mulle-js`
+
+```
+helm install mulle oci://ghcr.io/lacuna-systems/charts/mulle-js \
+  --set web.language=sv --set ingress.enabled=true --set ingress.host=mulle.example.com
+```
+With ingress enabled, the server is exposed at `/ws` on the same host and the game is configured to connect to it
+(`wss://` when `ingress.tls` is set). Set `web.serverAddress` to point the game at a different server.
+See `charts/mulle-js/values.yaml` for all options.
+
+## Releasing
+Run the **Release** workflow from the Actions tab on `master` and choose `patch`, `minor` or `major` (or enter an explicit version).
+It bumps the version in `package.json`, `package-lock.json` and the Helm chart (chart version = app version), commits and tags `vX.Y.Z`,
+creates a GitHub release and then starts the image and chart publish workflows on that tag. Released images are tagged
+`<lang>-X.Y.Z` (web) and `X.Y.Z` (server), and the chart is published as version `X.Y.Z`.
+
 [![JavaScript Style Guide](https://cdn.rawgit.com/standard/standard/master/badge.svg)](https://github.com/standard/standard)

@@ -1,0 +1,81 @@
+{{- if .Values.server.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mulle-js.fullname" . }}-server
+  labels:
+    {{- include "mulle-js.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+spec:
+  # In-memory game state: never run more than one replica.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "mulle-js.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      {{- with .Values.server.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "mulle-js.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: server
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          # Admin console on stdin, reachable with `kubectl attach -it`.
+          stdin: true
+          tty: true
+          ports:
+            - name: ws
+              containerPort: 8765
+          readinessProbe:
+            tcpSocket:
+              port: ws
+          livenessProbe:
+            tcpSocket:
+              port: ws
+          {{- with .Values.server.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.server.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mulle-js.fullname" . }}-server
+  labels:
+    {{- include "mulle-js.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+spec:
+  type: {{ .Values.server.service.type }}
+  ports:
+    - name: ws
+      port: {{ .Values.server.service.port }}
+      targetPort: ws
+  selector:
+    {{- include "mulle-js.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: server
+{{- end }}

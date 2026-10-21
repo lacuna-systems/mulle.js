@@ -1,0 +1,9 @@
+apiVersion: v2
+name: mulle-js
+description: Mulle.js - a web recreation of Mulle Meck Bygger Bilar, with its multiplayer WebSocket server
+type: application
+version: 0.1.0
+appVersion: "3.0.8"
+home: https://github.com/lacuna-systems/mulle.js
+sources:
+  - https://github.com/lacuna-systems/mulle.js

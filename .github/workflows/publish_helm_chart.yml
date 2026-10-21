@@ -1,0 +1,41 @@
+name: Publish Helm chart
+
+on:
+  push:
+    branches: [ master ]
+    tags: [ 'v*' ]
+    paths: [ 'charts/**', '.github/workflows/publish_helm_chart.yml' ]
+  pull_request:
+    paths: [ 'charts/**', '.github/workflows/publish_helm_chart.yml' ]
+  workflow_dispatch:
+
+jobs:
+  helm:
+    name: Lint and publish Helm chart to GHCR
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint chart
+        run: |
+          helm lint charts/mulle-js
+          helm template test charts/mulle-js --set ingress.enabled=true > /dev/null
+
+      - name: Package chart
+        run: helm package charts/mulle-js --destination dist-chart
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: Push chart
+        if: github.event_name != 'pull_request'
+        run: helm push dist-chart/mulle-js-*.tgz "oci://ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/charts"

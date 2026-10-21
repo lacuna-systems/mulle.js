@@ -1,13 +1,14 @@
-name: Publish Docker image
+name: Publish server Docker image
 
 on:
   push:
     branches: [ master ]
+    tags: [ 'v*' ]
   workflow_dispatch:
 
 jobs:
   push_to_registry:
-    name: Push server Docker image
+    name: Push server Docker image to GHCR
     runs-on: ubuntu-latest
 
     permissions:
@@ -16,24 +17,31 @@ jobs:
       attestations: write
       id-token: write
     steps:
+      - name: Set image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/mulle-js-server" >> "$GITHUB_ENV"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
       - name: Check out the repo
         uses: actions/checkout@v7
 
-      - name: Log in to registry
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4.6.0
         with:
-          registry: docker.datagutten.net
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v6.2.0
         with:
-          images: datagutten/mulle_js_server
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+            type=semver,pattern={{version}}
 
       - name: Build and push Docker image
         id: push
@@ -41,14 +49,12 @@ jobs:
         with:
           context: "{{defaultContext}}:server"
           push: true
-          tags: |
-            docker.datagutten.net/mulle_js_server
-            docker.datagutten.net/mulle_js:server
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v4
         with:
-          subject-name: docker.datagutten.net/mulle_js_server
+          subject-name: ${{ env.IMAGE }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true

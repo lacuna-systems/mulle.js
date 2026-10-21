@@ -1,0 +1,38 @@
+# Local stack: the game (static site) and the multiplayer WebSocket server.
+#
+# The game ISO is not part of the repository. Download it first:
+#   python3 build_scripts/build.py ${GAME_LANG:-sv} download-only
+# which places iso/mullebil_<lang>.iso and iso/plugin.exe in ./iso.
+#
+# Then: docker compose up --build
+#   game:   http://localhost:${WEB_PORT:-8080}/
+#   server: ws://localhost:${SERVER_PORT:-8765}
+services:
+  web:
+    build:
+      context: .
+      additional_contexts:
+        iso: ./iso
+      args:
+        GAME_LANG: ${GAME_LANG:-sv}
+        OPTIPNG_LEVEL: ${OPTIPNG_LEVEL:-0}
+    image: mulle-js:${GAME_LANG:-sv}
+    environment:
+      # WebSocket URL the browser connects to; written to config.js on container start.
+      SERVER_ADDRESS: ${SERVER_ADDRESS:-ws://localhost:${SERVER_PORT:-8765}}
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+  server:
+    build:
+      context: ./server
+    image: mulle-js-server:local
+    ports:
+      - "${SERVER_PORT:-8765}:8765"
+    # The server has an interactive admin console on stdin (readline).
+    stdin_open: true
+    tty: true
+    restart: unless-stopped

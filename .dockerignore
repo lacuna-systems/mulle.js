@@ -1,0 +1,9 @@
+.git
+.github
+.idea
+node_modules
+dist
+cst_out_new
+build_data
+bin
+charts

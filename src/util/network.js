@@ -16,8 +16,11 @@ class MulleNet {
 
     var address = process.env.NODE_ENV !== 'production' ? this.game.mulle.networkDevServer : this.game.mulle.networkServer
 
-    console.log('[network]', 'connect', process.env.SERVER_ADDRESS ?? address)
-    this.socket = new WebSocket(process.env.SERVER_ADDRESS ?? 'ws://' + address)
+    // Runtime config (config.js, written by the Docker entrypoint) takes precedence over the build-time address
+    var serverAddress = window.mulleConfig?.serverAddress || process.env.SERVER_ADDRESS || 'ws://' + address
+
+    console.log('[network]', 'connect', serverAddress)
+    this.socket = new WebSocket(serverAddress)
 
     // launch on connect
     this.socket.addEventListener('open', (event) => {

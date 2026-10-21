@@ -1,0 +1,42 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "mulle-js.fullname" . }}
+  labels:
+    {{- include "mulle-js.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          {{- if .Values.server.enabled }}
+          - path: {{ .Values.server.ingressPath }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "mulle-js.fullname" . }}-server
+                port:
+                  name: ws
+          {{- end }}
+          {{- if .Values.web.enabled }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "mulle-js.fullname" . }}-web
+                port:
+                  name: http
+          {{- end }}
+{{- end }}

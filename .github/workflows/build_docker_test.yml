@@ -32,6 +32,9 @@ jobs:
           key: game-iso-${{ matrix.language }}-${{ hashFiles('iso/mullebil_*.iso') }}
           restore-keys: game-iso-${{ matrix.language }}-
 
+      - name: Install download dependencies
+        run: pip install requests pyyaml
+
       - name: Download game
         run: python build_scripts/build.py ${{ matrix.language }} download-only
 
